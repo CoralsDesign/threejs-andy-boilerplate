@@ -1,6 +1,26 @@
-body, html {
-	margin: 0;
-	padding: 0;
-	overscroll-behavior: none;
-	overflow: hidden;
+*
+{
+    margin: 0;
+    padding: 0;
+}
+
+html,
+body
+{
+    height: 300vh;
+    font-family: 'Poppins';
+    display: grid;
+    place-content: center;
+}
+
+.webgl
+{
+    position: fixed;
+    top: 0;
+    left: 0;
+    outline: none;
+}
+
+h1 {
+    font-size: 15rem;
 }

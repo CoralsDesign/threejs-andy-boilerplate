@@ -1,120 +1,142 @@
 /////////////////////////////////////////////////////////////////////////
 ///// IMPORT
-import './main.css'
-import * as THREE from 'three'
-import { TWEEN } from 'three/examples/jsm/libs/tween.module.min.js'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
+import './main.css';
+import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import * as dat from 'dat.gui';
+import gsap from 'gsap';
 
-/////////////////////////////////////////////////////////////////////////
-//// DRACO LOADER TO LOAD DRACO COMPRESSED MODELS FROM BLENDER
-const dracoLoader = new DRACOLoader()
-const loader = new GLTFLoader()
-dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/')
-dracoLoader.setDecoderConfig({ type: 'js' })
-loader.setDRACOLoader(dracoLoader)
+// Debug
+const gui = new dat.GUI();
 
-/////////////////////////////////////////////////////////////////////////
-///// DIV CONTAINER CREATION TO HOLD THREEJS EXPERIENCE
-const container = document.createElement('div')
-document.body.appendChild(container)
+// Canvas
+const canvas = document.querySelector('canvas.webgl');
 
-/////////////////////////////////////////////////////////////////////////
-///// SCENE CREATION
-const scene = new THREE.Scene()
-scene.background = new THREE.Color('#c8f0f9')
+// Scene
+const scene = new THREE.Scene();
 
-/////////////////////////////////////////////////////////////////////////
-///// RENDERER CONFIG
-const renderer = new THREE.WebGLRenderer({ antialias: true}) // turn on antialias
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)) //set pixel ratio
-renderer.setSize(window.innerWidth, window.innerHeight) // make it full screen
-renderer.outputEncoding = THREE.sRGBEncoding // set color encoding
-container.appendChild(renderer.domElement) // add the renderer to html div
+// Objects
+const geometry = new THREE.TorusGeometry(0.7, 0.2, 16, 100);
 
-/////////////////////////////////////////////////////////////////////////
-///// CAMERAS CONFIG
-const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 1, 100)
-camera.position.set(34,16,-20)
-scene.add(camera)
+// Materials
 
-/////////////////////////////////////////////////////////////////////////
-///// MAKE EXPERIENCE FULL SCREEN
+const material = new THREE.MeshToonMaterial();
+material.color = new THREE.Color(0xffcc00);
+
+// Mesh
+const sphere = new THREE.Mesh(geometry, material);
+sphere.position.z = -3;
+scene.add(sphere);
+
+// Lights
+
+const pointLight = new THREE.PointLight(0xffffff, 1);
+pointLight.position.x = 2;
+pointLight.position.y = 3;
+pointLight.position.z = 4;
+scene.add(pointLight);
+
+// Dat.GUI
+
+const ringFolder = gui.addFolder('Ring');
+ringFolder.add(sphere.position, 'x').min(-7).max(7).step(0.01);
+ringFolder.add(sphere.position, 'y').min(-7).max(7).step(0.01);
+ringFolder.add(sphere.position, 'z').min(-7).max(7).step(0.01);
+
+let canvasEl = document.querySelector('canvas');
+let isZPositive = false;
+const colorObject = { color: '#ffcc00' };
+
+canvasEl.addEventListener('click', () => {
+	const targetZ = isZPositive ? -3 : 1.7;
+	const changeColor = isZPositive ? '#ffcc00' : 'red';
+	gsap.to(sphere.position, {
+		z: targetZ,
+		duration: 2,
+		ease: 'power3.inOut',
+	});
+	gsap.to(colorObject, {
+		color: changeColor,
+		duration: 2,
+		ease: 'power3.inOut',
+		onUpdate: () => {
+			sphere.material.color.set(colorObject.color);
+		},
+	});
+	isZPositive = !isZPositive;
+});
+
+/**
+ * Sizes
+ */
+const sizes = {
+	width: window.innerWidth,
+	height: window.innerHeight,
+};
+
 window.addEventListener('resize', () => {
-    const width = window.innerWidth
-    const height = window.innerHeight
-    camera.aspect = width / height
-    camera.updateProjectionMatrix()
+	// Update sizes
+	sizes.width = window.innerWidth;
+	sizes.height = window.innerHeight;
 
-    renderer.setSize(width, height)
-    renderer.setPixelRatio(2)
-})
+	// Update camera
+	camera.aspect = sizes.width / sizes.height;
+	camera.updateProjectionMatrix();
 
-/////////////////////////////////////////////////////////////////////////
-///// CREATE ORBIT CONTROLS
-const controls = new OrbitControls(camera, renderer.domElement)
+	// Update renderer
+	renderer.setSize(sizes.width, sizes.height);
+	renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+});
 
-/////////////////////////////////////////////////////////////////////////
-///// SCENE LIGHTS
-const ambient = new THREE.AmbientLight(0xa0a0fc, 0.82)
-scene.add(ambient)
+/**
+ * Camera
+ */
+// Base camera
+const camera = new THREE.PerspectiveCamera(
+	75,
+	sizes.width / sizes.height,
+	0.1,
+	100
+);
+camera.position.x = 0;
+camera.position.y = 0;
+camera.position.z = 2;
+scene.add(camera);
 
-const sunLight = new THREE.DirectionalLight(0xe8c37b, 1.96)
-sunLight.position.set(-69,44,14)
-scene.add(sunLight)
+// Controls
+// const controls = new OrbitControls(camera, canvas)
+// controls.enableDamping = true
 
-/////////////////////////////////////////////////////////////////////////
-///// LOADING GLB/GLTF MODEL FROM BLENDER
-loader.load('models/gltf/starter-scene.glb', function (gltf) {
+/**
+ * Renderer
+ */
+const renderer = new THREE.WebGLRenderer({
+	canvas: canvas,
+	alpha: true,
+});
+renderer.setSize(sizes.width, sizes.height);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-    scene.add(gltf.scene)
-})
+/**
+ * Animate
+ */
 
-/////////////////////////////////////////////////////////////////////////
-//// INTRO CAMERA ANIMATION USING TWEEN
-function introAnimation() {
-    controls.enabled = false //disable orbit controls to animate the camera
-    
-    new TWEEN.Tween(camera.position.set(26,4,-35 )).to({ // from camera position
-        x: 16, //desired x position to go
-        y: 50, //desired y position to go
-        z: -0.1 //desired z position to go
-    }, 6500) // time take to animate
-    .delay(1000).easing(TWEEN.Easing.Quartic.InOut).start() // define delay, easing
-    .onComplete(function () { //on finish animation
-        controls.enabled = true //enable orbit controls
-        setOrbitControlsLimits() //enable controls limits
-        TWEEN.remove(this) // remove the animation from memory
-    })
-}
+const clock = new THREE.Clock();
 
-introAnimation() // call intro animation on start
+const tick = () => {
+	const elapsedTime = clock.getElapsedTime();
 
-/////////////////////////////////////////////////////////////////////////
-//// DEFINE ORBIT CONTROLS LIMITS
-function setOrbitControlsLimits(){
-    controls.enableDamping = true
-    controls.dampingFactor = 0.04
-    controls.minDistance = 35
-    controls.maxDistance = 60
-    controls.enableRotate = true
-    controls.enableZoom = true
-    controls.maxPolarAngle = Math.PI /2.5
-}
+	// Update objects
+	sphere.rotation.y = 0.5 * elapsedTime;
 
-/////////////////////////////////////////////////////////////////////////
-//// RENDER LOOP FUNCTION
-function rendeLoop() {
+	// Update Orbital Controls
+	// controls.update()
 
-    TWEEN.update() // update animations
+	// Render
+	renderer.render(scene, camera);
 
-    controls.update() // update orbit controls
+	// Call tick again on the next frame
+	window.requestAnimationFrame(tick);
+};
 
-    renderer.render(scene, camera) // render the scene using the camera
-
-    requestAnimationFrame(rendeLoop) //loop the render function
-    
-}
-
-rendeLoop() //start rendering
+tick();
